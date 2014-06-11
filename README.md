@@ -1,7 +1,7 @@
 php-enum
 =======
 
-This project is an Enumeration implementation for PHP which is based on Java Enumerations.
+This project is an Enumeration implementation for PHP which is based on the concepts behind the Java Enum data type.
 
 Normally, I don't try to make force one language's constructs into a different language. However, in my time with Java I have grown to appreciate their Enum data type. I believe the functionality offered is significant enough to warrant a php implementation.
 
