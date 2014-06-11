@@ -70,9 +70,7 @@ use Iterator;
  *
  * @link http://docs.oracle.com/javase/tutorial/java/javaOO/enum.html
  *
- * @package    com
- * @subpackage revelex
- * @subpackage arch
+ * @package crussell52/enum
  */
 trait TEnum
 {
