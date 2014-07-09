@@ -169,8 +169,8 @@ trait TEnum
    *     protected static function _initializeDefinitions()
    *     {
    *       self::$_definitions = [
-   *         RED    => [255, 0, 0],
-   *         YELLOW => [255, 255, 0]
+   *         'RED'    => [255, 0, 0],
+   *         'YELLOW' => [255, 255, 0]
    *       ];
    *     }
    *
@@ -230,8 +230,8 @@ trait TEnum
    *     protected static function _initializeDefinitions()
    *     {
    *       self::$_definitions = [
-   *         RED    => [255, 0, 0],
-   *         YELLOW => [255, 255, 0]
+   *         'RED'    => [255, 0, 0],
+   *         'YELLOW' => [255, 255, 0]
    *       ];
    *     }
    *
