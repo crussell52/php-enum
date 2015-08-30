@@ -7,7 +7,7 @@
  * @license   http://www.opensource.org/licenses/mit-license.php MIT
  * @link      https://www.github.com/crussell52/php-enum
  */
-namespace crusell52\enum;
+namespace CRusell52\Enum;
 
 use ArrayIterator;
 use Iterator;
