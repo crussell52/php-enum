@@ -1,0 +1,24 @@
+{
+  "name": "crussell52/php-enum",
+  "type": "library",
+  "description": "PHP Enums inspired by Java Enums",
+  "keywords": ["enum","enumeration"],
+  "homepage": "https://github.com/crussell52/php-enum",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Chris Russell",
+      "email": "crussell52@gmail.com",
+      "homepage": "https://github.com/crussel52",
+      "role": "Developer"
+    }
+  ],
+  "require": {
+    "php": ">=5.5.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "CRusell52\\Enum\\": "src"
+    }
+  }
+}
