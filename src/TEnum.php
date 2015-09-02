@@ -10,6 +10,7 @@
 namespace CRusell52\Enum;
 
 use CRusell52\Enum\Exception\BadEnumNameException;
+use CRusell52\Enum\Exception\EnumNotFoundException;
 use Traversable;
 
 /**
@@ -78,6 +79,20 @@ trait TEnum
     private static $_definitions;
 
     /**
+     * A list of all enum value names, keyed by their ordinal value.
+     *
+     * @var array
+     */
+    private static $_ordinals;
+
+    /**
+     * Indicates whether or not the enum has been initialized. Used to prevent redundant initialization.
+     *
+     * @var bool
+     */
+    private static $_isInitialized = false;
+
+    /**
      * A memory-resident cache of previously created Enum instances, keyed by name.
      *
      * <p>Because an Enum instance represents constant values there is never a need for more than one
@@ -95,6 +110,13 @@ trait TEnum
     private $_name;
 
     /**
+     * The enum value's position within the definitions where the first defined receives an ordinal of 0.
+     *
+     * @var int
+     */
+    private $_ordinal;
+
+    /**
      * Returns the name of the Enum value.
      *
      * <code>
@@ -110,19 +132,32 @@ trait TEnum
     }
 
     /**
+     * This enum value's position in the collection.
+     *
+     * @return int
+     */
+    public final function getOrdinal()
+    {
+        return $this->_ordinal;
+    }
+
+    /**
      * Enum values should never be directly instantiated, so this constructor is marked as
      * final/private.
      *
-     * @param string $name The name of the desired Enum value. This must be a valid Enum name as
-     *                     defined within self::$_definitions.  It is also possible to retrieve a list
-     *                     of available Enum names with the static getNames() method.
+     * @param string $name    The name of the desired Enum value. This must be a valid Enum name as
+     *                        defined within self::$_definitions.  It is also possible to retrieve a list
+     *                        of available Enum names with the static getNames() method.
+     *
+     * @param int    $ordinal The enum value's position within the definitions where the first defined enum value
+     *                        receives an ordinal value of 0.
      *
      * @throws BadEnumNameException
      */
-    private final function __construct($name)
+    private final function __construct($name, $ordinal)
     {
         // Ensure that definitions have been initialized.
-        self::_initializeDefinitions();
+        self::_initialize();
 
         // If the name is not valid, then throw an exception.
         if (!isset(self::$_definitions[$name]))
@@ -131,20 +166,20 @@ trait TEnum
         }
 
         $this->_name = $name;
+        $this->_ordinal = $ordinal;
         $this->_populate(self::$_definitions[$name]);
     }
 
     /**
      * This method initializes the data which defines what Enum names are available and the values for each.
      *
-     * <p>Implementations of this method MUST override this method to set the value of self::$_definitions.
-     *
      * <p>This method will only be called once for any given Enum implementation. Implementations should never
      * need to call this method directly.
      *
-     * <p>Enum implementations MUST set the value of self::$_definitions within this method to define the details of each
-     * Enum value. Each key defines the name of an Enum value and each value MUST be an array defining the Enum value's
-     * attributes in a way which can be interpreted by the implementation's _populate() method.
+     * <p>Enum implementations MUST override this method to return an array containing the details of each
+     * Enum value. Each key of the returned array MUST define the name of an Enum value and each value of the returned
+     * array MUST be an array defining the Enum value's attributes in a way which can be interpreted by the
+     * implementation's _populate() method.
      *
      * <p>For example:
      *
@@ -157,7 +192,7 @@ trait TEnum
      *       protected static function _initializeDefinitions()
      *       {
      *           // 'NAME' => [red, green, blue]
-     *           self::$_definitions = [
+     *           return [
      *
      *               'RED'    => [255, 0, 0],
      *               'YELLOW' => [255, 255, 0]
@@ -176,7 +211,23 @@ trait TEnum
      */
     protected static function _initializeDefinitions()
     {
-        self::$_definitions = [];
+        return [];
+    }
+
+    /**
+     * Internal method for initializing the Enum implementation.
+     *
+     * @return void
+     */
+    private static function _initialize()
+    {
+        if (self::$_isInitialized) {
+            return;
+        }
+
+        self::$_definitions = self::_initializeDefinitions();
+        self::$_ordinals = array_keys(self::$_definitions);
+        self::$_isInitialized = true;
     }
 
     /**
@@ -204,6 +255,18 @@ trait TEnum
      */
     public static final function __callStatic($name, $ignored)
     {
+        return self::_getByName($name);
+    }
+
+    /**
+     * Retrieves (or creates) the enum value identified by the given name.
+     *
+     * @param string $name The name of the enum. The given value will be coerced into a string.
+     *
+     * @return static
+     */
+    private static function _getByName($name)
+    {
         $name = (string)$name;
         if (isset(self::$_enums[$name]))
         {
@@ -211,14 +274,10 @@ trait TEnum
         }
 
         // Make sure definitions have been initialized.
-        if (!isset(self::$_definitions))
-        {
-            // Enum values haven't been set yet. This case will only occur once per Enum subclass.
-            self::_initializeDefinitions();
-        }
+        self::_initialize();
 
-        // Run the constructor.  It will fail if the name is invalid.
-        return self::$_enums[$name] = new static($name);
+        // Run the constructor. It will fail if the name is invalid.
+        return self::$_enums[$name] = new static($name, array_search($name, self::$_ordinals));
     }
 
     /**
@@ -233,7 +292,7 @@ trait TEnum
      *       protected static function _initializeDefinitions()
      *       {
      *           // 'NAME' => [red, green, blue]
-     *           self::$_definitions = [
+     *           return = [
      *
      *               'RED'    => [255, 0, 0],
      *               'YELLOW' => [255, 255, 0]
@@ -264,7 +323,7 @@ trait TEnum
     public final static function getNames()
     {
         // Ensure that definitions have been initialized.
-        self::_initializeDefinitions();
+        self::_initialize();
 
         // Return the available names.
         return array_keys(self::$_definitions);
@@ -285,17 +344,33 @@ trait TEnum
      */
     public final static function getValues()
     {
-        // Make sure values are set.
-        if (!isset(self::$_definitions))
-        {
-            // Enum values haven't been set yet. This case will only occur once per Enum subclass.
-            self::_initializeDefinitions();
-        }
+        // Ensure that definitions have been initialized.
+        self::_initialize();
 
         // Loop over each available definition and return the instance.
         foreach (self::$_definitions as $name => $junk)
         {
             yield static::$name();
         }
+    }
+
+    /**
+     * Finds an enum value using the given ordinal.
+     *
+     * @param int $ordinal The ordinal value to look up. This value will be coerced into an integer.
+     *
+     * @throws EnumNotFoundException This exception is thrown if no enum value exists under the given ordinal.
+     *
+     * @return static
+     */
+    public final static function findByOrdinal($ordinal)
+    {
+        $ordinal = (int)$ordinal;
+        if (isset(self::$_ordinals[$ordinal])) {
+            return self::_getByName(self::$_ordinals[$ordinal]);
+        }
+
+        // No enum exists with that ordinal. Throw an exception.
+        throw new EnumNotFoundException();
     }
 }
