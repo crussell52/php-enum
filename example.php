@@ -53,23 +53,23 @@ class Color
   private $_blue;
 
   /**
-   * {@inheritDoc
+   * @inheritDoc
    */
   protected static function _initializeDefinitions()
   {
     // Definition provides red, green, and blue value (in that order)
-    self::$_definitions = [
+    return [
         'RED' => [255, 0, 0],
         'GREEN' => [0, 255, 0],
         'BLUE' => [0, 0, 255],
         'YELLOW' => [255, 255, 0],
+        'WHITE' => [255, 255, 255],
         'BLACK' => [0, 0, 0],
-        'WHITE' => [255, 255, 255]
     ];
   }
 
   /**
-   * {@inheritDoc}
+   * @inheritDoc
    */
   protected function _populate(array $args)
   {
@@ -159,7 +159,7 @@ function listHtmlCodes()
   foreach (Color::getValues() as $color)
   {
     /** @var Color $color */
-    echo $color->getName() . ': ' . $color->toHtmlCode() . "<br />\n";
+    echo $color->getName() . "({$color->getOrdinal()}: " . $color->toHtmlCode() . "<br />\n";
   }
 }
 
@@ -196,3 +196,24 @@ listHtmlCodes();
 echo "<h2>Compare colors</h2>";
 compareColors(Color::RED(), Color::BLUE());
 compareColors(Color::YELLOW(), Color::YELLOW());
+
+$serialCopyColor = unserialize(serialize(Color::YELLOW()));
+
+if ($serialCopyColor === Color::YELLOW()) {
+    echo "\nunexected === match on serialized/deserialized value\n";
+}
+else {
+    echo "\n Expected === mismatch on serialized/deserialized value\n";
+}
+
+switch ($serialCopyColor) {
+    case Color::YELLOW():
+        echo "case match!\n";
+        break;
+    case Color::BLACK():
+        echo "case false positive!\n";
+        break;
+    default:
+        echo "case false negative!\n";
+        break;
+}
