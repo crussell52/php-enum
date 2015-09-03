@@ -11,31 +11,37 @@
 namespace CRussell52\Enum;
 
 
+use Closure;
 use CRussell52\Enum\Exception\BadEnumNameException;
 use CRussell52\Enum\Exception\OrdinalOutOfRangeException;
 
-class EnumCollection
+/**
+ * This class is responsible for managing the values of Enum implementations and those values underlying definitions.
+ *
+ * @package CRussell52\Enum
+ */
+class EnumValueManager
 {
     /**
-     * ordinal => enumName
+     * A mapping between ordinal position (key) and EnumValue name (value).
      *
      * @var array
      */
     private $_ordinalMap;
 
     /**
-     * enumName => ordinal
+     * A mapping between EnumValue name (key) and ordinal position (value).
      *
      * @var array
      */
     private $_nameMap;
 
     /**
-     * local cache of previously delivered enums.
+     * Local cache of previously delivered EnumValues, keyed by name.
      *
      * name => Enum
      *
-     * @var array
+     * @var EnumValue[]
      */
     private $_enumValues = [];
 
@@ -46,11 +52,33 @@ class EnumCollection
      */
     private $_enumDefinitions = [];
 
-    public function __construct($definitions)
+    private $_constructorProxy;
+
+    /**
+     * @var Closure
+     */
+    private static $_constructorProxyTemplate;
+
+
+    public function __construct($enumClass, $definitions)
     {
+        // Make look-up maps from the definitions.
         $this->_ordinalMap = array_keys($definitions);
         $this->_nameMap = array_flip($this->_ordinalMap);
+
+        // Capture the definitions.
         $this->_enumDefinitions = $definitions;
+
+        // See if the template for constructor proxies has been created yet.
+        if (!self::$_constructorProxyTemplate) {
+            // Create the template for all constructor proxies.
+            self::$_constructorProxyTemplate = function($name, $ordinal, $definition) {
+                return new static($name, $ordinal, $definition);
+            };
+        }
+
+        // Create a proxy to the Enum class constructor.
+        $this->_constructorProxy = self::$_constructorProxyTemplate->bindTo(null, $enumClass);
     }
 
     public function getNames()
@@ -61,21 +89,26 @@ class EnumCollection
     /**
      * @param $name
      *
-     * @return mixed
+     * @return EnumValue
      */
     public function getByName($name)
     {
-        if (!isset($this->_nameMap[$name])) {
-            throw new BadEnumNameException($name, $this->_ordinalMap);
+        // If we already have an instance to deliver, deliver it.
+        if (isset($this->_enumValues[$name])) {
+            return $this->_enumValues[$name];
         }
 
-        return isset($this->_enumValues[$name]) ? $this->_enumValues[$name] : $this->_enumDefinitions[$name];
+        if (!isset($this->_nameMap[$name])) {
+            throw new BadEnumNameException($name, $this->getNames());
+        }
+
+        $proxy = $this->_constructorProxy;
+        return $this->_enumValues[$name] = $proxy($name, $this->_nameMap[$name], $this->_enumDefinitions[$name]);
     }
 
     public function getByOrdinal($ordinal)
     {
-        $name = $this->getName($ordinal);
-        return isset($this->_enumValues[$name]) ? $this->_enumValues[$name] : $this->_enumDefinitions[$name];
+        return $this->getByName($this->getName($ordinal));
     }
 
     public function getName($ordinal)
@@ -95,18 +128,6 @@ class EnumCollection
         }
 
         return $this->_nameMap[$name];
-    }
-
-    public function cacheEnumValue(EnumValue $enumValue)
-    {
-        // Extract the name.
-        $name = $enumValue->getName();
-
-        // Since we are caching the instance, we don't need the definition any more.
-        unset($this->_enumDefinitions[$name]);
-
-        // Add the instance to the cache.
-        $this->_enumValues[$name] = $enumValue;
     }
 }
 

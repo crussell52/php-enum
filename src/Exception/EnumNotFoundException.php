@@ -11,11 +11,7 @@ namespace CRussell52\Enum\Exception;
 
 
 /**
- * Exceptions of this type are appropriate for any case where an Enum value can not be found using specific criteria.
- *
- * <code>
- *   ChatColor::findByHexCode();
- * </code>
+ * Exceptions of this type are appropriate for any case where an Enum value can not be found using specific criteria
  *
  * @package CRussell52\Enum\Exception
  */

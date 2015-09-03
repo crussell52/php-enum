@@ -14,7 +14,7 @@ use CRussell52\Enum\Exception\OrdinalOutOfRangeException;
 use Traversable;
 
 /**
- * This trait provides the functionality necessary for a php-enum implementation.
+ * This abstract class provides the base for all Enum implementations.
  *
  * <p>Enumerations (Enums) can be thought of a collection of complex constants with methods attached to them.
  * They represent structures which have ONLY constant property values. An example is an Enum which
@@ -60,14 +60,14 @@ use Traversable;
  *   of the method matches the name of the Enum value.
  * <ul>
  *
- * @package crussell52/enum
+ * @package CRussell52/Enum
  */
 abstract class Enum implements EnumValue
 {
     /**
-     * @var EnumCollection[]
+     * @var EnumValueManager[]
      */
-    private static $_collections = [];
+    private static $_valueManagers = [];
 
     /**
      * The name of the Enum value.
@@ -121,14 +121,11 @@ abstract class Enum implements EnumValue
      *
      * @throws BadEnumNameException
      */
-    private final function __construct($name, $ordinal, $definition)
+    protected final function __construct($name, $ordinal, $definition)
     {
-
         $this->_name = $name;
         $this->_ordinal = $ordinal;
         $this->_populate($definition);
-
-        self::_getEnumCollection()->cacheEnumValue($this);
     }
 
     /**
@@ -182,12 +179,12 @@ abstract class Enum implements EnumValue
      */
     private static function _initialize()
     {
-        // If we already have a collection for this Enum implementation, then we have already initialized.
-        if (isset(self::$_collections[static::class])) {
+        // If we already have a value manager for this Enum implementation, then we have already initialized.
+        if (isset(self::$_valueManagers[static::class])) {
             return;
         }
 
-        self::$_collections[static::class] = new EnumCollection(static::_initializeDefinitions());
+        self::$_valueManagers[static::class] = new EnumValueManager(static::class, static::_initializeDefinitions());
     }
 
     /**
@@ -215,7 +212,7 @@ abstract class Enum implements EnumValue
      */
     public static final function __callStatic($name, $ignored)
     {
-        return self::findByName($name);
+        return self::getByName($name);
     }
 
     /**
@@ -225,24 +222,10 @@ abstract class Enum implements EnumValue
      *
      * @return static
      */
-    public final function findByName($name)
+    public final function getByName($name)
     {
-        // Ask the collection for the enum value.
-        $name = (string)$name;
-        $enumCollection = self::_getEnumCollection();
-        $target = $enumCollection->getByName($name);
-
-        // See if we received an instance of the invoked Enum implementation.
-        if ($target instanceof static) {
-            // We already have the enum value, just return it.
-            return $target;
-        }
-
-        // We didn't get an Enum value back, so we can assume that we received a definition from the collection, since
-        // we trust our self to follow our own rules...
-
-        // Run the constructor and return the result.
-        return new static($name, $enumCollection->getOrdinal($name), $target);
+        // Ask the manager for the enum value.
+        return self::_getValueManager()->getByName((string)$name);
     }
 
     /**
@@ -287,13 +270,13 @@ abstract class Enum implements EnumValue
      */
     public final static function getNames()
     {
-        return self::_getEnumCollection()->getNames();
+        return self::_getValueManager()->getNames();
     }
 
-    private static function _getEnumCollection()
+    private static function _getValueManager()
     {
         self::_initialize();
-        return self::$_collections[static::class];
+        return self::$_valueManagers[static::class];
     }
 
     /**
@@ -311,13 +294,13 @@ abstract class Enum implements EnumValue
      */
     public final static function getValues()
     {
-        // Ensure that definitions have been initialized.
-        $enumCollection = self::_getEnumCollection();
+        // Get a handle to the the value manager.
+        $valueManager = self::_getValueManager();
 
         // Loop over each available definition and return the instance.
-        foreach ($enumCollection->getNames() as $name)
+        foreach ($valueManager->getNames() as $name)
         {
-            yield self::findByName($name);;
+            yield $valueManager->getByName($name);
         }
     }
 
@@ -330,23 +313,9 @@ abstract class Enum implements EnumValue
      *
      * @return static
      */
-    public final static function findByOrdinal($ordinal)
+    public final static function getByOrdinal($ordinal)
     {
-        // Ask the collection for the enum value.
-        $ordinal = (int)$ordinal;
-        $enumCollection = self::_getEnumCollection();
-        $target = $enumCollection->getByOrdinal($ordinal);
-
-        // See if we received an instance of the invoked Enum implementation.
-        if ($target instanceof static) {
-            // We already have the enum value, just return it.
-            return $target;
-        }
-
-        // We didn't get an Enum value back, so we can assume that we received a definition from the collection, since
-        // we trust our self to follow our own rules...
-
-        // Run the constructor and return the result.
-        return new static($enumCollection->getName($ordinal), $ordinal, $target);
+        // Just ask the value manager for the enum value.
+        return self::_getValueManager()->getByOrdinal((int)$ordinal);
     }
 }
