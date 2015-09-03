@@ -11,10 +11,9 @@
  * @license   http://www.opensource.org/licenses/mit-license.php MIT
  * @link      https://www.github.com/crussell52/php-enum
  */
-use crusell52\enum\TEnum;
+use CRussell52\Enum\Enum;
 
-// YOU MUST UPDATE THIS TO RUN THE EXAMPLE!!
-include ('path/to/crussell52/enum/TEnum.php');
+require ('./vendor/autoload.php');
 
 /**
  * This class serves as an example of an Enum implementation. Each value represents a color which
@@ -27,10 +26,8 @@ include ('path/to/crussell52/enum/TEnum.php');
  * @method static Color WHITE()
  * @method static Color BLACK()
  */
-class Color
+class Color extends Enum
 {
-  use TEnum;
-
   /**
    * The amount of red which is used to create this color (0-255).
    *

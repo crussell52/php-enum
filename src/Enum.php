@@ -7,10 +7,10 @@
  * @license   http://www.opensource.org/licenses/mit-license.php MIT
  * @link      https://www.github.com/crussell52/php-enum
  */
-namespace CRusell52\Enum;
+namespace CRussell52\Enum;
 
-use CRusell52\Enum\Exception\BadEnumNameException;
-use CRusell52\Enum\Exception\EnumNotFoundException;
+use CRussell52\Enum\Exception\BadEnumNameException;
+use CRussell52\Enum\Exception\OrdinalOutOfRangeException;
 use Traversable;
 
 /**
@@ -62,45 +62,12 @@ use Traversable;
  *
  * @package crussell52/enum
  */
-trait TEnum
+abstract class Enum implements EnumValue
 {
     /**
-     * An associative array where each key represents an Enum name name in the Enum implementation
-     * and each value is an array of the values which represent the attribute values of the related Enum value.
-     *
-     * <p>The values of this array MUST be populated during execution of _initializeDefinitions().
-     *
-     * @see getName()
-     * @see _populate()
-     * @see _initializeDefinitions()
-     *
-     * @var array[]
+     * @var EnumCollection[]
      */
-    private static $_definitions;
-
-    /**
-     * A list of all enum value names, keyed by their ordinal value.
-     *
-     * @var array
-     */
-    private static $_ordinals;
-
-    /**
-     * Indicates whether or not the enum has been initialized. Used to prevent redundant initialization.
-     *
-     * @var bool
-     */
-    private static $_isInitialized = false;
-
-    /**
-     * A memory-resident cache of previously created Enum instances, keyed by name.
-     *
-     * <p>Because an Enum instance represents constant values there is never a need for more than one
-     * instance.
-     *
-     * @var array
-     */
-    private static $_enums = [];
+    private static $_collections = [];
 
     /**
      * The name of the Enum value.
@@ -154,20 +121,14 @@ trait TEnum
      *
      * @throws BadEnumNameException
      */
-    private final function __construct($name, $ordinal)
+    private final function __construct($name, $ordinal, $definition)
     {
-        // Ensure that definitions have been initialized.
-        self::_initialize();
-
-        // If the name is not valid, then throw an exception.
-        if (!isset(self::$_definitions[$name]))
-        {
-            throw new BadEnumNameException($name, self::getNames());
-        }
 
         $this->_name = $name;
         $this->_ordinal = $ordinal;
-        $this->_populate(self::$_definitions[$name]);
+        $this->_populate($definition);
+
+        self::_getEnumCollection()->cacheEnumValue($this);
     }
 
     /**
@@ -221,13 +182,12 @@ trait TEnum
      */
     private static function _initialize()
     {
-        if (self::$_isInitialized) {
+        // If we already have a collection for this Enum implementation, then we have already initialized.
+        if (isset(self::$_collections[static::class])) {
             return;
         }
 
-        self::$_definitions = self::_initializeDefinitions();
-        self::$_ordinals = array_keys(self::$_definitions);
-        self::$_isInitialized = true;
+        self::$_collections[static::class] = new EnumCollection(static::_initializeDefinitions());
     }
 
     /**
@@ -255,7 +215,7 @@ trait TEnum
      */
     public static final function __callStatic($name, $ignored)
     {
-        return self::_getByName($name);
+        return self::findByName($name);
     }
 
     /**
@@ -265,19 +225,24 @@ trait TEnum
      *
      * @return static
      */
-    private static function _getByName($name)
+    public final function findByName($name)
     {
+        // Ask the collection for the enum value.
         $name = (string)$name;
-        if (isset(self::$_enums[$name]))
-        {
-            return self::$_enums[$name];
+        $enumCollection = self::_getEnumCollection();
+        $target = $enumCollection->getByName($name);
+
+        // See if we received an instance of the invoked Enum implementation.
+        if ($target instanceof static) {
+            // We already have the enum value, just return it.
+            return $target;
         }
 
-        // Make sure definitions have been initialized.
-        self::_initialize();
+        // We didn't get an Enum value back, so we can assume that we received a definition from the collection, since
+        // we trust our self to follow our own rules...
 
-        // Run the constructor. It will fail if the name is invalid.
-        return self::$_enums[$name] = new static($name, array_search($name, self::$_ordinals));
+        // Run the constructor and return the result.
+        return new static($name, $enumCollection->getOrdinal($name), $target);
     }
 
     /**
@@ -322,11 +287,13 @@ trait TEnum
      */
     public final static function getNames()
     {
-        // Ensure that definitions have been initialized.
-        self::_initialize();
+        return self::_getEnumCollection()->getNames();
+    }
 
-        // Return the available names.
-        return array_keys(self::$_definitions);
+    private static function _getEnumCollection()
+    {
+        self::_initialize();
+        return self::$_collections[static::class];
     }
 
     /**
@@ -345,12 +312,12 @@ trait TEnum
     public final static function getValues()
     {
         // Ensure that definitions have been initialized.
-        self::_initialize();
+        $enumCollection = self::_getEnumCollection();
 
         // Loop over each available definition and return the instance.
-        foreach (self::$_definitions as $name => $junk)
+        foreach ($enumCollection->getNames() as $name)
         {
-            yield static::$name();
+            yield self::findByName($name);;
         }
     }
 
@@ -359,18 +326,27 @@ trait TEnum
      *
      * @param int $ordinal The ordinal value to look up. This value will be coerced into an integer.
      *
-     * @throws EnumNotFoundException This exception is thrown if no enum value exists under the given ordinal.
+     * @throws OrdinalOutOfRangeException This exception is thrown if no enum value exists under the given ordinal.
      *
      * @return static
      */
     public final static function findByOrdinal($ordinal)
     {
+        // Ask the collection for the enum value.
         $ordinal = (int)$ordinal;
-        if (isset(self::$_ordinals[$ordinal])) {
-            return self::_getByName(self::$_ordinals[$ordinal]);
+        $enumCollection = self::_getEnumCollection();
+        $target = $enumCollection->getByOrdinal($ordinal);
+
+        // See if we received an instance of the invoked Enum implementation.
+        if ($target instanceof static) {
+            // We already have the enum value, just return it.
+            return $target;
         }
 
-        // No enum exists with that ordinal. Throw an exception.
-        throw new EnumNotFoundException();
+        // We didn't get an Enum value back, so we can assume that we received a definition from the collection, since
+        // we trust our self to follow our own rules...
+
+        // Run the constructor and return the result.
+        return new static($enumCollection->getName($ordinal), $ordinal, $target);
     }
 }

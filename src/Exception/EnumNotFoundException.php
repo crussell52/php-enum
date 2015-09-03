@@ -7,19 +7,18 @@
  * @license   http://www.opensource.org/licenses/mit-license.php MIT
  * @link      https://www.github.com/crussell52/php-enum
  */
-namespace CRusell52\Enum\Exception;
+namespace CRussell52\Enum\Exception;
 
 
 /**
- * Exceptions of this type are appropriate for cases where an attempt to find an enum value fails. For example, it would
- * be appropriate for the following method:
+ * Exceptions of this type are appropriate for any case where an Enum value can not be found using specific criteria.
  *
  * <code>
  *   ChatColor::findByHexCode();
  * </code>
  *
- * @package CRusell52\Enum\Exception
+ * @package CRussell52\Enum\Exception
  */
-class EnumNotFoundException extends \Exception
+class EnumNotFoundException extends \RuntimeException
 {
 }

@@ -7,15 +7,15 @@
  * @license   http://www.opensource.org/licenses/mit-license.php MIT
  * @link      https://www.github.com/crussell52/php-enum
  */
-namespace CRusell52\Enum\Exception;
+namespace CRussell52\Enum\Exception;
 
 /**
  * This exception is appropriate for cases when an Enum value is requested by a name which does not match any defined
  * Enum value.
  *
- * @package CRusell52\Enum\Exception
+ * @package CRussell52\Enum\Exception
  */
-class BadEnumNameException extends \RuntimeException
+class BadEnumNameException extends EnumNotFoundException
 {
     /**
      * The name which failed to resolve to an Enum value.
