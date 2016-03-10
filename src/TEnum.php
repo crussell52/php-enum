@@ -208,6 +208,8 @@ trait TEnum
      *       }
      *   }
      * </code>
+     *
+     * @return array
      */
     protected static function _initializeDefinitions()
     {
