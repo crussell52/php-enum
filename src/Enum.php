@@ -39,13 +39,13 @@ use Traversable;
  *
  * <code>
  *    // EnumClass::VALUE_NAME();
- *    $color = ChatColor.RED();
+ *    $color = ChatColor::RED();
  * </code>
  *
  * <p>Retrieving an Enum value with a non-existent name will throw a BadEnumNameException:
  *
  * <code>
- *    $color = ChatColor.TABLE(); // throws BadEnumNameException
+ *    $color = ChatColor::TABLE(); // throws BadEnumNameException
  * </code>
  *
  * <p>An Enum implementation must follow these rules:
@@ -110,18 +110,18 @@ abstract class Enum implements EnumValue
 
     /**
      * Enum values should never be directly instantiated, so this constructor is marked as
-     * final/private.
+     * final/protected.
      *
-     * @param string $name    The name of the desired Enum value. This must be a valid Enum name as
-     *                        defined within self::$_definitions.  It is also possible to retrieve a list
-     *                        of available Enum names with the static getNames() method.
+     * Implementations should never call this constructor directly.
      *
-     * @param int    $ordinal The enum value's position within the definitions where the first defined enum value
-     *                        receives an ordinal value of 0.
+     * @param string $name        The name of the desired Enum value.
+     * @param int    $ordinal     The enum value's position within the definitions where the first defined enum value
+     *                            receives an ordinal value of 0.
+     * @param array  $definition  The definition of the desired Enum value.
      *
-     * @throws BadEnumNameException
+     * @internal
      */
-    protected final function __construct($name, $ordinal, $definition)
+    protected final function __construct($name, $ordinal, array $definition)
     {
         $this->_name = $name;
         $this->_ordinal = $ordinal;
@@ -167,7 +167,7 @@ abstract class Enum implements EnumValue
      *   }
      * </code>
      */
-    protected static function _initializeDefinitions()
+    protected static function _buildDefinitions()
     {
         return [];
     }
@@ -184,7 +184,22 @@ abstract class Enum implements EnumValue
             return;
         }
 
-        self::$_valueManagers[static::class] = new EnumValueManager(static::class, static::_initializeDefinitions());
+        $definitions = static::_buildDefinitions();
+        self::$_valueManagers[static::class] = new EnumValueManager(static::class, $definitions);
+        static::_prepare($definitions);
+    }
+
+    /**
+     * Opportunity for implementations to perform custom preparation. This is a good spot to do things like
+     * build out lookup maps based on key aspects of the definitions.
+     *
+     * @param array $definitions
+     *
+     * @return void
+     */
+    protected static function _prepare(array $definitions)
+    {
+        // No preparation in the base class.
     }
 
     /**
@@ -220,9 +235,11 @@ abstract class Enum implements EnumValue
      *
      * @param string $name The name of the enum. The given value will be coerced into a string.
      *
+     * @throws BadEnumNameException
+     *
      * @return static
      */
-    public final function getByName($name)
+    public final static function getByName($name)
     {
         // Ask the manager for the enum value.
         return self::_getValueManager()->getByName((string)$name);
@@ -290,7 +307,7 @@ abstract class Enum implements EnumValue
      *    }
      * </code>
      *
-     * @return Traversable
+     * @return Traversable|static[]
      */
     public final static function getValues()
     {

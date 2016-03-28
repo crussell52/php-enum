@@ -52,7 +52,7 @@ class Color extends Enum
   /**
    * @inheritDoc
    */
-  protected static function _initializeDefinitions()
+  protected static function _buildDefinitions()
   {
     // Definition provides red, green, and blue value (in that order)
     return [
@@ -155,7 +155,6 @@ function listHtmlCodes()
 {
   foreach (Color::getValues() as $color)
   {
-    /** @var Color $color */
     echo $color->getName() . "({$color->getOrdinal()}: " . $color->toHtmlCode() . "<br />\n";
   }
 }

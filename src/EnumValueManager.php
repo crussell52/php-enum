@@ -60,11 +60,8 @@ class EnumValueManager
     private static $_constructorProxyTemplate;
 
 
-    public function __construct($enumClass, $definitions)
+    public function __construct($enumClass, array $definitions)
     {
-        // Make look-up maps from the definitions.
-        $this->_ordinalMap = array_keys($definitions);
-        $this->_nameMap = array_flip($this->_ordinalMap);
 
         // Capture the definitions.
         $this->_enumDefinitions = $definitions;
@@ -77,8 +74,16 @@ class EnumValueManager
             };
         }
 
-        // Create a proxy to the Enum class constructor.
+        // Create a proxy to the constructor of the given enum class.
         $this->_constructorProxy = self::$_constructorProxyTemplate->bindTo(null, $enumClass);
+        $this->_setLookupMaps($definitions);
+    }
+
+    private function _setLookupMaps($definitions)
+    {
+        // Make look-up maps from the definitions.
+        $this->_ordinalMap = array_keys($definitions);
+        $this->_nameMap = array_flip($this->_ordinalMap);
     }
 
     public function getNames()
@@ -88,6 +93,8 @@ class EnumValueManager
 
     /**
      * @param $name
+     * 
+     * @throws BadEnumNameException
      *
      * @return EnumValue
      */

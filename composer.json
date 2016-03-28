@@ -18,7 +18,7 @@
   },
   "autoload": {
     "psr-4": {
-      "CRusell52\\Enum\\": "src"
+      "CRussell52\\Enum\\": "src"
     }
   }
 }
